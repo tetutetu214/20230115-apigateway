@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:
+  Lambda Create
+# ------------------------------------------------------------#
+#  Metadata
+# ------------------------------------------------------------#
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "Lambda Configuration"
+        Parameters:
+        - FunctionName
+        - Description
+        - Handler
+        - MemorySize
+        - Runtime
+        - Timeout
+        - TagsName
+
+# ------------------------------------------------------------#
+#  InputParameters
+# ------------------------------------------------------------#
+Parameters:
+  FunctionName:
+    Type: String
+    Default: "cfn-lmd-sendqueue-inamura"
+  Description:
+    Type: String
+    Default: "cfn-lmd--sendqueue-inamura"
+  Handler:
+    Type: String
+    Default: "index.lambda_handler"
+  MemorySize:
+    Type: String
+    Default: "128"
+  Runtime:
+    Type: String
+    Default: "python3.9"
+  Timeout:
+    Type: String
+    Default: "10"
+  TagsName:
+    Type: String
+    Default: "inamura"
+# ------------------------------------------------------------#
+#  Resources
+# ------------------------------------------------------------#
+Resources:
+# ------------------------------------------------------------#
+#  Lambda
+# ------------------------------------------------------------#
+  Lambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: |
+          import boto3
+          import urllib.parse
+          import json
+          from boto3.dynamodb.conditions import Key, Attr
+          import os
+
+          BUCKET = os.environ['S3']
+          TEMPLATE = os.environ['TEMPLATE']
+
+          def lambda_handler(event, context):
+            print('Loading function')
+
+            #DynamoDB boto3操作 Tableオブジェクト取得
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table('mailaddress')
+
+            #SQS boto3操作 キュー取得
+            sqs = boto3.resource('sqs')
+            queue = sqs.get_queue_by_name(QueueName='cfn-sqs-inamura')
+            
+            #環境変数からバケット名 オブジェクト名取得
+            bucket = BUCKET
+            template = TEMPLATE
+            
+            #DynamoDB(table) から notsend 0 を絞り込んで取得
+            response = table.query(
+              IndexName='notsend-index',
+              KeyConditionExpression=Key('notsend').eq(0)
+            )
+
+            #絞り込んだテーブル情報 response['Item']から send 0 にプリペーアドクエリ更新
+            for item in response['Items']:
+              table.update_item(
+                Key={'email' : item['email']},
+                UpdateExpression="set send=:val",
+                ExpressionAttributeValues= {
+                  ':val' : 0
+                }
+              )
+
+              #SQSにメッセージとして登録
+              sqsresponse = queue.send_message(
+                MessageBody=item['email'],
+                MessageAttributes={
+                  'username' : {
+                    'DataType' : 'String',
+                    'StringValue' : item['username']
+                  },
+                  'bucket' : {
+                    'DataType' : 'String',
+                    'StringValue' : bucket
+                  },
+                  'template' : {
+                    'DataType' : 'String',
+                    'StringValue' : template
+                  }
+                }
+              )
+              
+              #ログ出力
+              print(json.dumps(sqsresponse))
+
+      Description: !Ref Description
+      FunctionName: !Ref FunctionName
+      Handler: !Ref Handler 
+      MemorySize: !Ref MemorySize
+      Runtime: !Ref Runtime
+      Timeout: !Ref Timeout
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          # SNS: !ImportValue cfn-sns-topic-inamura-arn
+          # S3: !ImportValue  cfn-s3-BucketName
+          TEMPLATE: template-mail.txt 
+      Tags:
+        - Key: "User"
+          Value: !Ref TagsName
+      DeadLetterConfig:
+        TargetArn: !ImportValue cfn-dlq-inamura-queuearn
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${FunctionName}-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "sts:AssumeRole"
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: !Sub "${FunctionName}-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:CreateLogGroup"
+                Resource: !Sub "arn:${AWS::Partition}:logs:*:*:*"
+
+              - Effect: "Allow"
+                Action:
+                  - "sqs:*" 
+                Resource: "arn:aws:sqs:ap-northeast-1:717076937412:*"
+
+              - Effect: "Allow"
+                Action:
+                  - "s3:*" 
+                Resource: "arn:aws:s3:::*"
+
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:*"  
+                Resource: "arn:aws:dynamodb:ap-northeast-1:717076937412:*"
+
+  #削除する際は TriggerLambdaPermission をコメントアウトして Lambda を更新する
+  # TriggerLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !Ref FunctionName
+  #     Action: lambda:InvokeFunction
+  #     Principal: events.amazonaws.com
+  #     SourceArn: !ImportValue cfn-evb-checkdynamodb-inamura-arn
+  #ここまで
+
+# ------------------------------------------------------------#
+# Output Parameters
+#------------------------------------------------------------#          
+Outputs:
+  LambdaArn:
+    Value: !GetAtt Lambda.Arn
+    Export:
+      Name: !Sub "${FunctionName}-arn"
+  LambdaName:
+    Value: !Ref FunctionName
+    Export:
+      Name: !Sub "${FunctionName}-name"
