@@ -55,7 +55,14 @@ Resources:
     Properties:
       Code:
         ZipFile: |
+          import base64
+
           def lambda_handler(event, context):
+            if not event['isBase64Encoded']:
+              print(event['body'])
+            else:
+              print(base64.b64decode(event['body']))
+          
           message = 'Hello!'  
           return { 
               'message' : message
