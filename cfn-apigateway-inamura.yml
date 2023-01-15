@@ -13,6 +13,7 @@ Metadata:
         - Name
         - FunctionName
         - StageName
+        - TagsName
 # ------------------------------------------------------------#
 #  InputParameters
 # ------------------------------------------------------------#
@@ -22,10 +23,13 @@ Parameters:
     Default: "cfn-apigateway-inamura"
   FunctionName:
     Type: String
-    Default: "cfn-lmd-writedynamodb-inamura-name"
+    Default: "cfn-lmd-writedynamodb-inamura"
   StageName:
     Type: String
-    Default: "dev"
+    Default: "$default"
+  TagsName:
+    Type: String
+    Default: "inamura"
 # ------------------------------------------------------------#
 #  Resources
 # ------------------------------------------------------------#
@@ -38,6 +42,11 @@ Resources:
     Properties:
       Name: !Ref Name
       ProtocolType: HTTP
+      Tags:
+        "User" : !Sub "${TagsName}"
+      CorsConfiguration:
+        AllowOrigins: 
+          - "*"
 
   HttpApiDefaultStage:
     Type: AWS::ApiGatewayV2::Stage
@@ -54,19 +63,19 @@ Resources:
       IntegrationUri: !ImportValue cfn-lmd-writedynamodb-inamura-arn
       PayloadFormatVersion: '2.0'
 
-  HttpApiPermission:
+  HttpApiIntegrationPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !ImportValue cfn-lmd-writedynamodb-inamura-arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/*"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/writedynamodb"
 
   HttpApiHelloRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: !Sub ANY /${FunctionName}
+      RouteKey: GET /writedynamodb
       AuthorizationType: NONE
       Target: !Sub "integrations/${HttpApiIntegration}"
 
