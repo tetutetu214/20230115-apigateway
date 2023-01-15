@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:
+  APIGateway Create
+# ------------------------------------------------------------#
+#  Metadata
+# ------------------------------------------------------------#
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "APIGateway Configuration"
+        Parameters:
+        - Name
+        - FunctionName
+        - StageName
+# ------------------------------------------------------------#
+#  InputParameters
+# ------------------------------------------------------------#
+Parameters:
+  Name:
+    Type: String
+    Default: "cfn-apigateway-inamura"
+  FunctionName:
+    Type: String
+    Default: "cfn-lmd-writedynamodb-inamura-name"
+  StageName:
+    Type: String
+    Default: "dev"
+# ------------------------------------------------------------#
+#  Resources
+# ------------------------------------------------------------#
+Resources:
+# ------------------------------------------------------------#
+#  APIGateway
+# ------------------------------------------------------------#
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Ref Name
+      ProtocolType: HTTP
+
+  HttpApiDefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: !Ref StageName
+      AutoDeploy: true
+
+  HttpApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !ImportValue cfn-lmd-writedynamodb-inamura-arn
+      PayloadFormatVersion: '2.0'
+
+  HttpApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue cfn-lmd-writedynamodb-inamura-arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/*"
+
+  HttpApiHelloRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: !Sub ANY /${FunctionName}
+      AuthorizationType: NONE
+      Target: !Sub "integrations/${HttpApiIntegration}"
+
+
+# ------------------------------------------------------------#
+# Output Parameters
+#------------------------------------------------------------#          
+Outputs:
+  Endpoint:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/${FunctionName}'
+    Export:
+      Name: Endpoint
+  OriginDomain:
+    Value: !Sub '${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'   
+    Export:
+      Name: OriginDomain
+  StageName:
+    Value: !Sub '${StageName}'
+    Export:
+      Name: StageName
