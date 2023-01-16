@@ -101,10 +101,13 @@ Resources:
     Properties:
       Bucket: !Ref S3Bucket
       PolicyDocument:
-      - Action: s3:GetObject
-        Effect: Allow
-        Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
-        Principal: "*"
+        Statement:
+        - Action:
+          - s3:GetObject
+          - s3:GetObjectVersion
+          Effect: Allow
+          Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+          Principal: "*"
 
 # ------------------------------------------------------------#
 #  Outputs
