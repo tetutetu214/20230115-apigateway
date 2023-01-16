@@ -6,23 +6,31 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-      function onSubmit() {
+      function onSubmit() { 
         var data = {
           'username' : $('#username').val(),
           'email' : $('#email').val(),
           'notsend' : $('#notsend').val(),
           'send' : $('#send').val()
         };
-        $.post('https://erl5cyx54k.execute-api.ap-northeast-1.amazonaws.com/writedynamodb',
-        JSON.stringify(data)
-      ).done(function (data, textStatus, jqXHR) {
+
+        //   $.post('https://119hgg7ey3.execute-api.ap-northeast-1.amazonaws.com/writedynamodb',
+      //   JSON.stringify(data)
+      // ).done(function (data, textStatus, jqXHR) {
+        
+        $.ajax({
+          'type' : 'POST',
+          'url' : 'https://119hgg7ey3.execute-api.ap-northeast-1.amazonaws.com/writedynamodb',
+          'contentType' : 'text/plain',
+          'data' : JSON.stringify(data)
+        }).done(function (data, textStatus, jqXHR) {
         // 成功
         alert('送信完了しました');
-        $('#username').val(''); $('#email').val('');
+        $('#username').val(''); $('#email').val(''); $('#notsend').val(''); $('#send').val('')
       }).fail(function (jqXHR, textStatus, errorThrown) {
         var err = [];
         try {
-          err = $.parseJson(jqXHR.responseText);
+          err = $.parseJSON(jqXHR.responseText);
         } catch (e) {
         }
         alert('エラーが発生しました' + err['error']);
@@ -41,8 +49,8 @@
       <div class="form-group">
         <label for="email">メールアドレス</label>
         <input type="text" class="form-control" id="email">
-        <input type="hidden"  id="notsend" value="0">
-        <input type="hidden"  id="send" value="1">
+        <input type="hidden"  class="form-control" id="notsend" value="0">
+        <input type="hidden"  class="form-control" id="send" value="1">
       </div>
       <button id="submit" class="btn btn-primary" onclick="onSubmit();return false;">送信</button>
   </body>
