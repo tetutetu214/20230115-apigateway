@@ -75,7 +75,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: GET /writedynamodb
+      RouteKey: POST /writedynamodb
       AuthorizationType: NONE
       Target: !Sub "integrations/${HttpApiIntegration}"
 
