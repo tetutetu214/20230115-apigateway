@@ -56,17 +56,80 @@ Resources:
       Code:
         ZipFile: |
           import base64
+          import json
+          import boto3
+          import decimal
 
-          def lambda_handler(event, context):
-            if not event['isBase64Encoded']:
-              print(event['body'])
-            else:
-              print(base64.b64decode(event['body']))
+          #DynamoDBオブジェクト
+          dynamodb = boto3.resource('dynamodb')
+
+          # #シーケンスDB連番を更新
+          # def next_seq(table, email)
+          #   response = table.update_item(
+          #     Key={
+          #     'email' : email
+          #     },
+          #     UpdateExpression="set seq = seq + :val",
+          #     ExpressionAttributeValues= {
+          #       ':val' : 1
+          #     },
+          #     ReturnValues='UPDATED_NEW'
+          #   )
+          #   return response['Attributes']['seq']
           
-          message = 'Hello!'  
-          return { 
-              'message' : message
-          }
+          def lambda_handler(event, context):
+            try:
+              # #シーケンスデータ作成
+              # seqtable = dynamodb.Table('mailaddress')
+              # nextseq = next_seq(seqtable, 'user')
+
+              #フォームの入力データを得る
+              body = event['body']
+              if event['isBase64Encoded']:
+                body = base64.b64decode(body)
+
+              decoded = json.loads(body)
+              username = decoded['username']
+              email = decoded['email']
+              notsend = decoded['notsend']
+              send = decoded['send']
+
+              #クライアントのIPアドレス
+              host = event['requestContext']['http']['sourceIp']
+
+              #現在のUNIXタイムスタンプ
+              now = time.time()
+
+              #mailaddressテーブルに登録する
+              mailaddress = dynamodb.Table('mailaddress')
+              mailaddress.put_item(
+                Item={
+                  'username' : username,
+                  'email' : email,
+                  'notsend' : notsend,
+                  'send' : send,
+                  'accepted_at' : decimal.Decimal(str(now)),
+                  'host' : host
+                }
+              )
+              #結果を返す
+              return json.dumps({})
+
+            except:
+            #エラーメッセージを返す
+              import traceback
+              err = traceback.format_exc()
+              print(err)
+
+              return {
+                'statusCode' : 500,
+                'headers' : {
+                  'context-type' : 'text/json'
+                },
+                'body' : json.dumps({
+                  'error' : '内部エラーが発生しました'
+                  })
+                }
 
       Description: !Ref Description
       FunctionName: !Ref FunctionName
