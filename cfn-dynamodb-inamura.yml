@@ -30,8 +30,8 @@ Resources:
       AttributeDefinitions:
         - AttributeName: email
           AttributeType: S
-        - AttributeName: notsend
-          AttributeType: N
+        # - AttributeName: notsend
+        #   AttributeType: N
       KeySchema:
         - AttributeName: email
           KeyType: HASH
