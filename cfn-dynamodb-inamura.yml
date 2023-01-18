@@ -38,16 +38,16 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
-      GlobalSecondaryIndexes:
-        - IndexName: notsend-index
-          KeySchema:
-            - AttributeName: notsend
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
+      # GlobalSecondaryIndexes:
+      #   - IndexName: notsend-index
+      #     KeySchema:
+      #       - AttributeName: notsend
+      #         KeyType: HASH
+      #     Projection:
+      #       ProjectionType: ALL
+      #     ProvisionedThroughput:
+      #       ReadCapacityUnits: 1
+      #       WriteCapacityUnits: 1
       Tags: 
         - Key: "username"
           Value: "inamura"
