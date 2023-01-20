@@ -104,12 +104,12 @@ Resources:
               mailaddress = dynamodb.Table('mailaddress')
               mailaddress.put_item(
                 Item={
-                  'username' : username,
-                  'email' : email,
-                  'notsend' : notsend,
-                  'send' : send,
-                  'accepted_at' : decimal.Decimal(str(now)),
-                  'host' : host
+                  'username' : {'S': username},
+                  'email' : {'S': email},
+                  'notsend' : {'N': notsend},
+                  'send' : {'N': send},
+                  'accepted_at' : {'N': decimal.Decimal(str(now))},
+                  'host' : {'S': host}
                 }
               )
               #結果を返す
