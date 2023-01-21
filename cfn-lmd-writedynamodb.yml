@@ -58,31 +58,14 @@ Resources:
           import base64
           import json
           import boto3
-          import decimal
+
+          table_name = 'mailaddress'
 
           #DynamoDBオブジェクト
-          dynamodb = boto3.resource('dynamodb')
+          dynamodb = boto3.client('dynamodb')
 
-          # #シーケンスDB連番を更新
-          # def next_seq(table, email)
-          #   response = table.update_item(
-          #     Key={
-          #     'email' : email
-          #     },
-          #     UpdateExpression="set seq = seq + :val",
-          #     ExpressionAttributeValues= {
-          #       ':val' : 1
-          #     },
-          #     ReturnValues='UPDATED_NEW'
-          #   )
-          #   return response['Attributes']['seq']
-          
           def lambda_handler(event, context):
             try:
-              # #シーケンスデータ作成
-              # seqtable = dynamodb.Table('mailaddress')
-              # nextseq = next_seq(seqtable, 'user')
-
               #フォームの入力データを得る
               body = event['body']
               if event['isBase64Encoded']:
@@ -94,24 +77,17 @@ Resources:
               notsend = decoded['notsend']
               send = decoded['send']
 
-              #クライアントのIPアドレス
-              host = event['requestContext']['http']['sourceIp']
-
-              #現在のUNIXタイムスタンプ
-              now = time.time()
 
               #mailaddressテーブルに登録する
-              mailaddress = dynamodb.Table('mailaddress')
-              mailaddress.put_item(
-                Item={
-                  'username' : {'S': username},
-                  'email' : {'S': email},
-                  'notsend' : {'N': notsend},
-                  'send' : {'N': send},
-                  'accepted_at' : {'N': decimal.Decimal(str(now))},
-                  'host' : {'S': host}
-                }
-              )
+              item = {
+                'username' : {'S': username},
+                'email' : {'S': email},
+                'notsend' : {'N': notsend},
+                'send' : {'N': send}
+              } 
+              
+              dynamodb.put_item(TableName=table_name, Item=item)
+
               #結果を返す
               return json.dumps({})
 
