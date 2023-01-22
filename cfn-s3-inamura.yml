@@ -10,6 +10,7 @@ Metadata:
           default: "S3 Configuration"
         Parameters:
         - S3BucketName
+        - YourIP
         - AccessControl
         - BlockPublicAcls
         - BlockPublicPolicy
@@ -28,6 +29,10 @@ Parameters:
     Type: String
     Default: "cfn-s3-2023016-inamura"
     Description: Type of this BacketName.
+  YourIP:
+    Type: String 
+    Default: "60.73.219.138"
+    Description: YourIP for BucketPolicy writing
   VersioningConfiguration:
     Type: String
     Default: "Enabled"
@@ -91,7 +96,7 @@ Resources:
             Status: Enabled
             ExpirationInDays: !Ref ExpirationInDays
       WebsiteConfiguration:
-        IndexDocument: index.html
+        IndexDocument: !index.html
       Tags:
         - Key: "User"
           Value: !Ref TagsName
@@ -108,6 +113,9 @@ Resources:
           Effect: Allow
           Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
           Principal: "*"
+          Condition:
+            IpAddress: 
+              aws:SourceIp: !Ref YourIP
 
 # ------------------------------------------------------------#
 #  Outputs
@@ -117,3 +125,7 @@ Outputs:
     Value: !Ref S3Bucket
     Export:
       Name: cfn-s3-BucketName
+  S3WebsiteURL:
+    Value: !Sub "http://${S3BucketName}.s3-website-${AWS::Region}.amazonaws.com"
+    Export:
+      Name: cfn-s3-WebsiteURL
