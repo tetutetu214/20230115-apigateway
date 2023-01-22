@@ -11,7 +11,6 @@ Metadata:
           default: "APIGateway Configuration"
         Parameters:
         - Name
-        - FunctionName
         - StageName
         - TagsName
 # ------------------------------------------------------------#
@@ -21,9 +20,6 @@ Parameters:
   Name:
     Type: String
     Default: "cfn-apigateway-inamura"
-  FunctionName:
-    Type: String
-    Default: "cfn-lmd-writedynamodb-inamura"
   StageName:
     Type: String
     Default: "$default"
@@ -69,30 +65,21 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !ImportValue cfn-lmd-writedynamodb-inamura-arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/writedynamodb"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/${Name}"
 
   HttpApiHelloRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
-      RouteKey: POST /writedynamodb
+      RouteKey: !Sub POST /${Name}
       AuthorizationType: NONE
       Target: !Sub "integrations/${HttpApiIntegration}"
-
 
 # ------------------------------------------------------------#
 # Output Parameters
 #------------------------------------------------------------#          
 Outputs:
   Endpoint:
-    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/${FunctionName}'
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Name}'
     Export:
       Name: Endpoint
-  OriginDomain:
-    Value: !Sub '${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'   
-    Export:
-      Name: OriginDomain
-  StageName:
-    Value: !Sub '${StageName}'
-    Export:
-      Name: StageName
