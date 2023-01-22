@@ -11,6 +11,7 @@ Metadata:
           default: "DynamoDB Configuration"
         Parameters:
         - TableName
+        - TagsName
 # ------------------------------------------------------------#
 #  InputParameters
 # ------------------------------------------------------------#
@@ -18,6 +19,9 @@ Parameters:
   TableName:
     Type: String
     Default: "mailaddress"
+  TagsName:
+    Type: String
+    Default: "inamura"
 
 # ------------------------------------------------------------#
 #  Resources
@@ -50,7 +54,7 @@ Resources:
             WriteCapacityUnits: 1
       Tags: 
         - Key: "username"
-          Value: "inamura"
+          Value: !Ref TagsName
 
 Outputs:
   DynamoDBArn:
